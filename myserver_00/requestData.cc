@@ -12,7 +12,6 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <queue>
-
 using namespace std;
 
 pthread_mutex_t qlock = PTHREAD_MUTEX_INITIALIZER;
@@ -48,22 +47,32 @@ string MimeType::getMime(const std::string &suffix){
 		return mime[suffix];
 }
 
-priority_queue<shared_ptr<mytimer>, deque<shared_ptr<mytimer>>, timerCmp> myTimerQueue;
+priority_queue<mytimer*, deque<mytimer*>, timerCmp> myTimerQueue;
 
-requestData::requestData():againTimes(0),now_read_pos(0),state(STATE_PARSE_URI),h_state(h_start),keep_alive(false){
-	cout<<"requestData constructed!";
+requestData::requestData():againTimes(0),now_read_pos(0),state(STATE_PARSE_URI),h_state(h_start),keep_alive(false),timer(NULL){
+	cout<<"againTimes = "<<againTimes<<endl;
+	cout<<"requestData constructed!\n";
+	cout<<"finish lou\n";
 }
 
-requestData::requestData(int _epollfd, int _fd, std::string _path):againTimes(0),now_read_pos(0),state(STATE_PARSE_URI),h_state(h_start),keep_alive(false),path(_path), fd(_fd), epollfd(_epollfd){
-	cout<<"requestData()"<<endl;
-}
+requestData::requestData(int _epollfd, int _fd, std::string _path):againTimes(0),now_read_pos(0),state(STATE_PARSE_URI),h_state(h_start),keep_alive(false),timer(NULL),path(_path), fd(_fd), epollfd(_epollfd){}
 
 requestData::~requestData(){
 	cout<<"~requestData()"<<endl;
+	struct epoll_event ev;
+	ev.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+	ev.data.ptr = (void*)this;
+	epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &ev);
+	if(timer != NULL){
+		timer->clearReq();
+		timer = NULL;
+	}
+	close(fd);
 }
 
-void requestData::addTimer(shared_ptr<mytimer> mtimer){
-	timer = mtimer;
+void requestData::addTimer(mytimer *mtimer){
+	if(timer == NULL)
+		timer = mtimer;
 }
 
 int requestData::getFd(){
@@ -86,17 +95,18 @@ void requestData::reset(){
 }
 
 void requestData::seperateTime(){
-	if(timer.lock()){
-		shared_ptr<mytimer> my_timer(timer.lock());
-		my_timer->clearReq();
-		timer.reset();
+	if(timer){
+		timer->clearReq();
+		timer = NULL;
 	}
 }
 
 void requestData::handleRequest(){
 	char buff[MAX_BUFF];
 	bool isError = false;
+	cout<<"this is handleRequest()\n";
 	while(true){
+		cout<<"Request while\n";
 		int read_num = readn(fd, buff, MAX_BUFF);
 		if(read_num < 0){
 			perror("1");
@@ -190,14 +200,13 @@ void requestData::handleRequest(){
 		}
 	}
 	pthread_mutex_lock(&qlock);
-	shared_ptr<mytimer> mtimer(new mytimer(shared_from_this(), 500));
-	this->addTimer(mtimer);
-	{
-		MutexLockGuard lock;		
-		myTimerQueue.push(mtimer);
-	}
-	__uint32_t _epo_event = EPOLLIN | EPOLLET | EPOLLONESHOT;
-	int ret = Epoll::epoll_mod(fd, shared_from_this(), _epo_event);
+	mytimer *mtimer = new mytimer(this, 500);
+	timer = mtimer;
+	myTimerQueue.push(mtimer);
+	pthread_mutex_unlock(&qlock);
+
+	__uint32_t _epo_event = EPOLLIN | EPOLLET|EPOLLONESHOT;
+	int ret = epoll_mod(epollfd, fd, static_cast<void*>(this), _epo_event);
 	if(ret < 0){
 		delete this;
 		return;
@@ -457,7 +466,7 @@ void requestData::handleError(int fd, int err_num, string short_msg){
 	writen(fd, send_buff, strlen(send_buff));
 }
 
-mytimer::mytimer(std::shared_ptr<requestData> _request_data, int timeout): deleted(false), request_data(_request_data){
+mytimer::mytimer(requestData *_request_data, int timeout): deleted(false), request_data(_request_data){
 	struct timeval now;
 	gettimeofday(&now, NULL);
 	expired_time = ((now.tv_sec * 1000) + (now.tv_usec / 1000))+timeout;
@@ -465,7 +474,11 @@ mytimer::mytimer(std::shared_ptr<requestData> _request_data, int timeout): delet
 
 mytimer::~mytimer(){
 	cout<<"~mytimer()\n";
-	
+	if(request_data != NULL){
+		cout<<"request_data="<<request_data<<endl;
+		delete request_data;
+		request_data = NULL;
+	}
 }
 
 bool mytimer::isvalid(){
@@ -497,15 +510,7 @@ size_t mytimer::getExpTime()const{
 	return expired_time;
 }
 
-bool timerCmp::operator()(shared_ptr<mytimer>a, shared_ptr<mytimer>b) const{
+bool timerCmp::operator()(const mytimer *a, const mytimer *b) const{
 	return a->getExpTime() > b->getExpTime();
-}
-
-MutexLockGuard::MutexLockGuard(){
-	pthread_mutex_lock(&lock);
-}
-
-MutexLockGuard::~MutexLockGuard(){
-	pthread_mutex_unlock(&lock);
 }
 

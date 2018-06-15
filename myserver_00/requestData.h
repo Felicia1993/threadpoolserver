@@ -2,7 +2,6 @@
 #define REQUESTDATA
 #include <string>
 #include <unordered_map>
-#include <memory>
 
 const int STATE_PARSE_URI = 1;
 const int STATE_PARSE_HEADERS = 2;
@@ -37,7 +36,7 @@ private:
 	static pthread_mutex_t lock;
 	static std::unordered_map<std::string, std::string>mime;
 	MimeType();
-	MimeType(const MimeType &m);
+	~MimeType();
 public:
 	static std::string getMime(const std::string &suffix);
 };
@@ -57,7 +56,7 @@ enum HeaderState{
 struct mytimer;
 struct requestData;
 
-class requestData:public std::enable_shared_from_this<requestData>{
+struct requestData{
 private:
 	int againTimes;
 	std::string path;
@@ -74,7 +73,7 @@ private:
 	bool isfinish;
 	bool keep_alive;
 	std::unordered_map<std::string, std::string> headers;
-	std::weak_ptr<mytimer> timer;
+	mytimer *timer;
 private:
 	int parse_URI();
 	int parse_Headers();
@@ -84,7 +83,7 @@ public:
 	requestData();
 	requestData(int _epollfd, int _fd, std::string _path);
 	~requestData();
-	void addTimer(std::shared_ptr<mytimer>mtimer);
+	void addTimer(mytimer *mtimer);
 	void reset();
 	int getFd();
 	void setFd(int _Fd);
@@ -96,9 +95,9 @@ public:
 struct mytimer{
 	bool deleted;
 	size_t expired_time;
-	std::shared_ptr<requestData>request_data;
+	requestData *request_data;
 	
-	mytimer(std::shared_ptr<requestData> _request_data, int timeout);
+	mytimer(requestData* _request_data, int timeout);
 	~mytimer();
 	void update(int timeout);
 	bool isvalid();
@@ -109,17 +108,6 @@ struct mytimer{
 };
 
 struct timerCmp{
-	bool operator()(std::shared_ptr<mytimer> a, std::shared_ptr<mytimer> b) const;
-};
-
-class MutexLockGuard{
-public:
-	explicit MutexLockGuard();
-	~MutexLockGuard();
-private:
-	static pthread_mutex_t lock;
-private:
-	MutexLockGuard(const MutexLockGuard&);
-	MutexLockGuard& operator=(const MutexLockGuard&);
+	bool operator()(const mytimer *a, const mytimer *b) const;
 };
 #endif
