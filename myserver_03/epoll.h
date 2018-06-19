@@ -1,16 +1,16 @@
 #pragma once
 #include "requestData.h"
-#include <vector>
 #include <sys/epoll.h>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 #include "time.h"
 
 class Epoll{
 public:
 	typedef std::shared_ptr<requestData> SP_ReqData;
 private:
-	
+	static const int MAXFDS = 1000;
 	static epoll_event* events;
 	static std::unordered_map<int, SP_ReqData> fd2req;
 	static int epoll_fd;

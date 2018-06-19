@@ -37,7 +37,7 @@ int socket_bind_listen(int port){
 	int listen_fd = 0;
 	if((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 		return -1;
-
+	
 	int optval = 1;
 	if(setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1)
 		return -1;
@@ -85,7 +85,7 @@ int main(){
 
 	shared_ptr<requestData> req(new requestData());
 	req->setFd(listen_fd);
-	if(Epoll::epoll_add(listen_fd, req, event) < 0){
+	if(Epoll::epoll_add(listen_fd, req, EPOLLIN | EPOLLET) < 0){
 		printf("epoll add error!\n");
 		return 1;
 	}

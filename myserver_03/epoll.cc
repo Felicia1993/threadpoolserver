@@ -45,9 +45,9 @@ int Epoll::epoll_mod(int fd, std::shared_ptr<requestData> request, __uint32_t ev
 	event.events = events;
 	if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event) < 0){
 		perror("epoll_add error");
+		fd2req[fd].reset();
 		return -1;
 	}
-	fd2req[fd] = request;
 	return 0;
 }
 
@@ -59,9 +59,7 @@ int Epoll::epoll_del(int fd, __uint32_t events){
 		perror("epoll_add error");
 		return -1;
 	}
-	auto fd_ite = fd2req.find(fd);
-	if(fd_ite != fd2req.end())
-		fd2req.erase(fd_ite);
+	fd2req[fd].reset();
 	return 0;
 }
 
@@ -70,7 +68,7 @@ void Epoll::my_epoll_wait(int listen_fd, int max_events, int timeout){
 	if(event_count < 0)
 		perror("epoll wait error");
 	std::vector<SP_ReqData> req_data = getEventsRequest(listen_fd, event_count, PATH);
-	
+
 	if(req_data.size() > 0){
 		for(auto &req: req_data){
 			if(ThreadPool::threadpool_add(req) < 0)	
@@ -87,12 +85,11 @@ using namespace std;
 void Epoll::acceptConnection(int listen_fd, int epoll_fd, const std::string path){
 	struct sockaddr_in client_addr;
 	memset(&client_addr, 0, sizeof(struct sockaddr_in));
-	socklen_t client_addr_len = 0;
+	socklen_t client_addr_len = sizeof(client_addr);
 	int accept_fd =0;
 	while((accept_fd = accept(listen_fd, (struct sockaddr*)&client_addr, &client_addr_len)) > 0){
 		//cout<<inet_addr(client_addr.sin_addr.s_addr) << endl;
 		cout<<client_addr.sin_port<<endl;
-
 		int ret = setSocketNonBlocking(accept_fd);
 		if(ret < 0){
 			perror("Set non block failed.\n");
