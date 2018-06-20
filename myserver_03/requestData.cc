@@ -73,7 +73,7 @@ void requestData::setFd(int _Fd){
 void requestData::reset(){
 	againTimes = 0;
 	path.clear();
-	content.clear();
+	inBuffer.clear();
 	file_name.clear();
 	now_read_pos = 0;
 	state = STATE_PARSE_URI;
@@ -95,112 +95,142 @@ void requestData::seperateTime(){
 	}
 }
 
-void requestData::handleRequest(){
-	char buff[MAX_BUFF];
-	bool isError = false;
-	while(true){
-		int read_num = readn(fd, buff, MAX_BUFF);
+void requestData::handleRead(){
+	do{
+		int read_num = readn(fd, inBuffer);
+		printf("read_num = %d\n", read_num);
 		if(read_num < 0){
 			perror("1");
-			isError = true;
+			error = true;
+			handleError(fd, 400, "Bad Request");
 			break;
 		}
 		else if(read_num == 0){
-			perror("read_num == 0");
-			if(errno == EAGAIN){
-				if(againTimes > AGAIN_MAX_TIMES)
-					isError = true;
-				else
-					++againTimes;
-			}
-			else if(errno != 0)
-				isError = true;
+			error = true;
 			break;
 		}
-		string now_read(buff, buff + read_num);
-		content += now_read;
-
 		if(state == STATE_PARSE_URI){
 			int flag = this->parse_URI();
 			if(flag == PARSE_URI_AGAIN)
 				break;
 			else if(flag == PARSE_URI_ERROR){
 				perror("2");
-				isError = true;
+				error = true;
+				handleError(fd, 400, "Bad Request");
 				break;
 			}
+			else
+				state = STATE_PARSE_HEADERS;
 		}
 		if(state == STATE_PARSE_HEADERS){
-			int flag = this->parse_Headers();	
-			if(flag == PARSE_HEADER_AGAIN){
+			int flag = this->parse_Headers();
+			if(flag == PARSE_HEADER_AGAIN)
 				break;
-			}
 			else if(flag == PARSE_HEADER_ERROR){
 				perror("3");
-				isError = true;
+				error = true;
+				handleError(fd, 400, "Bad Request");
 				break;
 			}
 			if(method == METHOD_POST){
 				state = STATE_RECV_BODY;
 			}
-			else{
+			if(method == METHOD_GET){
 				state = STATE_ANALYSIS;
 			}
 		}
 		if(state == STATE_RECV_BODY){
 			int content_length = -1;
-			if(headers.find("Content-length") != headers.end()){
+			if(headers.find("Content-length")!=headers.end()){
 				content_length = stoi(headers["Content-length"]);
 			}
 			else{
-				isError = true;
+				error = true;
+				handleError(fd, 400, "Bad Request: Lack of argument (Content-length)");
 				break;
 			}
-			if(content.size() < content_length)
-				continue;
+			if(inBuffer.size() < content_length)
+				break;
 			state = STATE_ANALYSIS;
 		}
 		if(state == STATE_ANALYSIS){
 			int flag = this->analysisRequest();
-			if(flag < 0){
-				isError = true;
-				break;
+			if(flag == ANALYSIS_SUCCESS){
+				state = STATE_FINISH;
+				break;	
 			}	
-			else if(flag == ANALYSIS_SUCCESS){
-				state = STATE_FINISH;		
-				break;
-			}
 			else{
-				isError = true;
+				error = true;
 				break;
 			}
 		}
+	}while(false);
+	if(!error){
+		if(outBuffer.size() < 0)
+			events |= EPOLLOUT;
+		if(state == STATE_FINISH){
+			cout<<"keep-alive = "<<keep_alive<<endl;
+			if(keep_alive){
+				this->reset();
+				events |= EPOLLIN;
+			}
+			else
+				return;
+		}
+		else		
+			events |= EPOLLIN;
 	}
-	if(isError == true){
-		delete this;
-		return;
-	}
+}
 
-	if(state == STATE_FINISH){
-		if(keep_alive){
-			printf("ok\n");
-			this->reset();
+void requestData::handleWrite(){
+	if(!error){
+		if(writen(fd, outBuffer) < 0){
+			perror("written");
+			events = 0;
+			error = true;
 		}
-		else{
-			delete this;
-			return;
-		}
+		else if(outBuffer.size() < 0)
+			events |= EPOLLOUT;
 	}
-	Epoll::add_timer(shared_from_this(), 500);
-	__uint32_t _epo_event = EPOLLIN | EPOLLET | EPOLLONESHOT;
-	int ret = Epoll::epoll_mod(fd, shared_from_this(), _epo_event);
-	if(ret < 0){
-		return;
+}
+
+void requestData::handleConn(){
+	if(!error){
+		if(events != 0){
+			int timeout = 2000;
+			if(keep_alive){
+				timeout = 5*60*1000;				
+			}
+			isAbleRead = false;
+			isAbleWrite = false;
+			Epoll::add_timer(shared_from_this(), timeout);
+			if((events & EPOLLIN) && (events & EPOLLOUT)){
+				events = __uint32_t(0);
+				events |= EPOLLOUT;
+			}
+			events |= (EPOLLET | EPOLLONESHOT);
+			__uint32_t _events = events;
+			events = 0;
+			if(Epoll::epoll_mod(fd, shared_from_this(), _events) < 0){
+				printf("Epoll::epoll_mod failed.\n");
+			}
+		}
+		else if(keep_alive){
+			events |= (EPOLLIN | EPOLLET | EPOLLONESHOT);
+			int timeout = 5 * 60 * 1000;
+			isAbleRead = false;
+			isAbleWrite = false;
+			Epoll::add_timer(shared_from_this(), timeout);
+			__uint32_t _events = events;
+			events = 0;
+			if(Epoll::epoll_mod(fd, shared_from_this(), _events) < 0)
+				printf("Epoll::epoll_mod error\n");
+		}
 	}
 }
 
 int requestData::parse_URI(){
-	string &str = content;
+	string &str = inBuffer;
 	int pos = str.find('\r',now_read_pos);
 	if(pos < 0){
 		return PARSE_URI_AGAIN;
@@ -266,7 +296,7 @@ int requestData::parse_URI(){
 }
 
 int requestData::parse_Headers(){
-	string &str = content;
+	string &str = inBuffer;
 	int key_start = -1, key_end = -1, value_start = -1, value_end = -1;
 	int now_read_line_begin = 0;
 	bool notFinish = true;
@@ -364,67 +394,47 @@ int requestData::parse_Headers(){
 
 int requestData::analysisRequest(){
 	if(method == METHOD_POST){
-		char header[MAX_BUFF];
-		sprintf(header, "HTTP/1.1 %d %s\r\n", 200, "OK");
+		string header;
+		header += "HTTP/1.1 200 OK\r\n";
 		if(headers.find("Connection") != headers.end()){
 			keep_alive = true;
-			sprintf(header, "%sConnection: keep_alive\r\n", header);
-			sprintf(header, "%skeep_Alive: timeout=%d\r\n", header);
+			header += string("Connection:keep_alive\r\n") + "keep_Alive: timeout="+to_string(5*60*1000)+"\r\n";
 		}
-		char *send_content = "I have received this.";
-		
-		sprintf(header, "%sContent-length: %zu\r\n", header, strlen(send_content));
-		sprintf(header, "%s\r\n", header);
-		size_t send_len = (size_t)writen(fd, header, strlen(header));
-		if(send_len != strlen(header)){
-			perror("Send header failed.\n");
-			return ANALYSIS_ERROR;
-		}
-		
-		send_len = (size_t)writen(fd, send_content, strlen(send_content));
-		if(send_len != strlen(send_content)){
-			perror("Send content failed.\n");
-			return ANALYSIS_ERROR;
-		}
-		cout<<"content size == " << content.size() <<endl;
+		string send_content = "I have received this.";
+		int length = stoi(headers["Content-length"]);
+		vector<char> data(inBuffer.begin(), inBuffer.begin() + length);
+		cout<<"data.size = "<<data.size()<<endl;
 		return ANALYSIS_SUCCESS;
 	}
 	else if(method == METHOD_GET){
-		char header[MAX_BUFF];
-		sprintf(header, "HTTP/1.1 %d %s\r\n", 200, "OK");
+		string header;
+		header= string("HTTP/1.1 200 OK ");
 		if(headers.find("Connection") != headers.end() && headers["Connection"] == "keep-alive"){
 			keep_alive = true;
-			sprintf(header, "%sConnection: keep-alive\r\n", header);
-			sprintf(header, "%sKeep-Alive: timeout=%d\r\n", header, EPOLL_WAIT_TIME);
+			header += string("Connection:keep_alive\r\n") + "keep_Alive: timeout="+to_string(5*60*1000)+"\r\n";
 		}
 		int dot_pos = file_name.find('.');
-		const char* filetype;
+		string filetype;
 		if(dot_pos < 0)
-			filetype = MimeType::getMime("default").c_str();
+			filetype = MimeType::getMime("default");
 		else
-			filetype = MimeType::getMime(file_name.substr(dot_pos)).c_str();
+			filetype = MimeType::getMime(file_name.substr(dot_pos));
 		struct stat sbuf;
 		if(stat(file_name.c_str(), &sbuf) < 0){
 			handleError(fd, 404, "Not Found!");
 			return ANALYSIS_ERROR;
 		}
-		sprintf(header, "%sContent-type: %s\r\n", header, filetype);
-		
-		sprintf(header, "%s\r\n", header);
-		size_t send_len = (size_t)writen(fd, header, strlen(header));
-		if(send_len != strlen(header)){
-			perror("Send header failed.\n");
-			return ANALYSIS_ERROR;
-		}
+		header += "Content-type: " + filetype + "\r\n";
+		header += "Content-length: " + to_string(sbuf.st_size) + "\r\n";
+
+		header += "\r\n";
+		outBuffer += header;
+
 		int src_fd = open(file_name.c_str(), O_RDONLY, 0);
 		char *src_addr = static_cast<char*>(mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, src_fd, 0));
 		close(src_fd);
 
-		send_len = writen(fd, src_addr, sbuf.st_size);
-		if(send_len != sbuf.st_size){
-			perror("Send file failed.\n");
-			return ANALYSIS_ERROR;
-		}
+		outBuffer += src_addr;
 		munmap(src_addr, sbuf.st_size);
 		return ANALYSIS_SUCCESS;
 	}
@@ -452,6 +462,25 @@ void requestData::handleError(int fd, int err_num, string short_msg){
 	writen(fd, send_buff, strlen(send_buff));
 }
 
+void requestData::disableReadAndWrite(){
+	isAbleRead = false;
+	isAbleWrite = false;
+}
 
+void requestData::enableRead(){
+	isAbleRead = true;
+}
+
+void requestData::enableWrite(){
+	isAbleWrite = true;
+}
+
+bool requestData::canRead(){
+	return isAbleRead;
+}
+
+bool requestData::canWrite(){
+	return isAbleWrite;
+}
 
 

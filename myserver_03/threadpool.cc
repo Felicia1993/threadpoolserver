@@ -83,29 +83,26 @@ int ThreadPool::threadpool_add(std::shared_ptr<void> args, std::function<void(st
 	return err;
 }
 
-/*int ThreadPool::threadpool_destroy(){
+int ThreadPool::threadpool_destroy(ShutDownOption shutdown_option){
 	printf("Threadpool destroy\n");
 	int i, err = 0;
-	if(pool == NULL){
-		return THREADPOOL_INVALID;
-	}
 
 	if(pthread_mutex_lock(&(pool->lock))!= 0){
 		return THREADPOOL_LOCK_FAILURE;
 	}
 	do{
-		if(pool->shutdown){
+		if(shutdown){
 			err = THREADPOOL_SHUTDOWN;
 			break;		
 		}	
-		pool->shutdown = (flags & THREADPOOL_GRACEFUL) ? graceful_shutdown : immediate_shutdown;
-		if((pthread_cond_broadcast(&(pool->notify)) !=0)|| (pthread_mutex_unlock(&(pool->lock))!=0)){
+		shutdown = shutdown_option;
+		if((pthread_cond_broadcast(&notify) !=0)|| (pthread_mutex_unlock(&lock)!=0)){
 			err = THREADPOOL_LOCK_FAILURE;
 			break;
 		}
 
 		for(i = 0; i < pool->thread_count; ++i){
-			if(pthread_join(pool->threads[i], NULL) != 0){
+			if(pthread_join(threads[i], NULL) != 0){
 				err = THREADPOOL_THREAD_FAILURE;
 				break;
 			}
@@ -113,30 +110,25 @@ int ThreadPool::threadpool_add(std::shared_ptr<void> args, std::function<void(st
 	}while(false);
 
 	if(!err){
-		threadpool_free(pool);
+		threadpool_free();
 	}
 	return err;
 }
-int threadpool_free(threadpool_t *pool){
-	if(pool == NULL || pool->started > 0){
+
+int threadpool_free(){
+	if(started > 0){
 		return -1;
 	}
-	if(pool->threads){
-		free(pool->threads);
-		free(pool->queue);
-
-		pthread_mutex_lock(&(pool->lock));
-		pthread_mutex_destroy(&(pool->lock));
-		pthread_cond_destroy(&(pool->notify));
-	}
-	free(pool);
+	pthread_mutex_lock(&(pool->lock));
+	pthread_mutex_destroy(&(pool->lock));
+	pthread_cond_destroy(&(pool->notify));
 	return 0;
-}*/
+}
 
 void *ThreadPool::threadpool_thread(void *args){
 	while(true){
 		ThreadPoolTask task;
-		pthread_mutex_lock(&(pool->lock));
+		pthread_mutex_lock(&lock);
 		while((count == 0) && (!shutdown)){
 			pthread_cond_wait(&notify, &lock);
 		}	
@@ -146,6 +138,8 @@ void *ThreadPool::threadpool_thread(void *args){
 		}
 		task.fun = queue[head].fun;
 		task.args = queue[head].args;
+		queue[head].fun = NULL;
+		queue[head].args.reset();
 		head = (head + 1) % queue_size;
 		count -= 1;
 
@@ -153,8 +147,8 @@ void *ThreadPool::threadpool_thread(void *args){
 		(task.fun)(task.args);
 	}
 	--started;
-
 	pthread_mutex_unlock(&lock);
+	printf("this threadpool thread finishs!\n");
 	pthread_exit(NULL);
 	return NULL;
 }

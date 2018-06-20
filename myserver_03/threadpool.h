@@ -31,6 +31,7 @@ struct ThreadPoolTask{
 };
 
 void myHandler(std::shared_ptr<void> req);
+
 class ThreadPool{
 private:
 	static pthread_mutex_t lock;

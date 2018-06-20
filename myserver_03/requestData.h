@@ -40,7 +40,7 @@ private:
 	MimeType();
 	MimeType(const MimeType &m);
 public:
-	static string getMime(const string &suffix);
+	static std::string getMime(const std::string &suffix);
 private:
 	static pthread_once_t once_control;
 };
@@ -65,8 +65,12 @@ private:
 	std::string path;
 	int fd;
 	int epollfd;
+
+	std::string inBuffer;
+	std::string outBuffer;
+	bool error;
+	__uint32_t events;
 	
-	std::string content;
 	int method;
 	int HTTPversion;
 	std::string file_name;
@@ -77,6 +81,9 @@ private:
 	bool keep_alive;
 	std::unordered_map<std::string, std::string> headers;
 	std::weak_ptr<TimeNode> timer;
+
+	bool isAbleRead;
+	bool isAbleWrite;
 private:
 	int parse_URI();
 	int parse_Headers();
@@ -90,9 +97,16 @@ public:
 	void reset();
 	int getFd();
 	void setFd(int _Fd);
-	void seperateTime();
-	void handleRequest();
+	void handleRead();
+	void handleWrite();
+	void seperateTimer();
+	void handleConn();
 	void handleError(int fd, int err_num, std::string short_msg);
+	void disableReadAndWrite();
+	void enableRead();
+	void enableWrite();
+	bool canRead();
+	bool canWrite();
 };
 
 #endif

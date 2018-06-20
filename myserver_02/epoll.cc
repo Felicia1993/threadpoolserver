@@ -13,7 +13,7 @@ int TIMER_TIME_OUT = 500;
 std::deque<std::shared_ptr<mytimer>>, timerCmp> myTimerQueue;
 
 epoll_event *Epoll::events;
-std::unordered_map<int, std::shared_ptr<RequestData>>Epoll::fd2req;
+std::unordered_map<int, SP_ReqData>Epoll::fd2req;
 int Epoll::epoll_fd = 0;
 const std::string Epoll::PATH = "/";
 
@@ -99,13 +99,10 @@ void Epoll::acceptConnection(int listen_fd, int epoll_fd, const std::string path
 			return;
 		}
 
-		std::shared_ptr<requestData>req_info (new requestData(epoll_fd, accept_fd, path));
+		SP_ReqData req_info (new requestData(epoll_fd, accept_fd, path));
 		__uint32_t _epo_event = EPOLLIN | EPOLLET | EPOLLONESHOT;
 		Epoll::epoll_add(accept_fd, req_info, _epo_event);
-		std::shared_ptr<mytimer> mtimer (new mytimer(req_info, TIMER_TIME_OUT));
-		req_info->addTimer(mtimer);
-		MutexLockGuard lock;
-		myTimerQueue.push(mtimer);
+		timer_manager.addTimer(req_info, TIMER_TIME_OUT);
 		
 	}
 }

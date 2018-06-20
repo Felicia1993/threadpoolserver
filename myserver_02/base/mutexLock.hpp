@@ -24,7 +24,7 @@ private:
 
 class MutexLockGuard: noncopyable{
 public:
-	explicit MutexLockGuard(MutexLock &_mutex);
+	explicit MutexLockGuard(MutexLock &_mutex):
 	mutex(_mutex){
 		mutex.lock();
 	}

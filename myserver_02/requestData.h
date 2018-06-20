@@ -40,7 +40,7 @@ private:
 	MimeType();
 	MimeType(const MimeType &m);
 public:
-	static string getMime(const string &suffix);
+	static std::string getMime(const std::string &suffix);
 private:
 	static pthread_once_t once_control;
 };

@@ -10,10 +10,8 @@
 #include <deque>
 
 int TIMER_TIME_OUT = 500;
-std::deque<std::shared_ptr<mytimer>>, timerCmp> myTimerQueue;
 
 epoll_event *Epoll::events;
-std::unordered_map<int, std::shared_ptr<RequestData>>Epoll::fd2req;
 int Epoll::epoll_fd = 0;
 const std::string Epoll::PATH = "/";
 
@@ -99,11 +97,8 @@ void Epoll::acceptConnection(int listen_fd, int epoll_fd, const std::string path
 		std::shared_ptr<requestData>req_info (new requestData(epoll_fd, accept_fd, path));
 		__uint32_t _epo_event = EPOLLIN | EPOLLET | EPOLLONESHOT;
 		Epoll::epoll_add(accept_fd, req_info, _epo_event);
-		std::shared_ptr<mytimer> mtimer (new mytimer(req_info, TIMER_TIME_OUT));
-		req_info->addTimer(mtimer);
-		MutexLockGuard lock;
-		myTimerQueue.push(mtimer);
 		
+		timer_manager.addTimer(req_info, TIMER_TIME_OUT);
 	}
 }
 
@@ -117,18 +112,29 @@ std::vector<std::shared_ptr<requestData>> Epoll::getEventsRequest(int listen_fd,
 		else if(fd < 3)
 			break;
 		else{
-			if((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!events[i].events & EPOLLIN)){
-				auto fd_ite = fd2req.find(fd);
-				if(fd_ite != fd2req.end())
-					fd2req.erase(fd_ite);
+			if((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)){
+				printf("error event\n");
+				if(fd2req[fd])
+					fd2req[fd]->seperateTimer();
+				fd2req[fd].reset();
 				continue;
 			}
-			std::shared_ptr<requestData> cur_req(fd2req[fd]);
-			cur_req->seperateTime();
-			req_data.push_back(cur_req);
-			auto fd_ite = fd2req.find(fd);
-			if(fd_ite != fd2req.end())
-				fd2req.erase(fd_ite);
+			
+			SP_ReqData cur_req = fd2req[fd];
+			if(cur_req){
+				if((events[i].events & EPOLLIN || (events[i].events & EPOLLPRI)))
+					cur_req->enableRead();
+				else
+					cur_req->enableWrite();
+					
+				
+				cur_req->seperateTimer();
+				req_data.push_back(cur_req);
+				fd2req[fd].reset();
+			}			
+			else{
+				cout<<"SP cur_req is invalid"<<endl;	
+			}
 		}
 	}
 	return req_data;

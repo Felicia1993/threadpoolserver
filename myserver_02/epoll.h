@@ -12,7 +12,7 @@ public:
 private:
 	
 	static epoll_event* events;
-	static std::unordered_map<int, SP_ReqData> fd2req;
+	static std::unordered_map<int, SP_ReqData>fd2req;
 	static int epoll_fd;
 	static const std::string PATH;	
 	
