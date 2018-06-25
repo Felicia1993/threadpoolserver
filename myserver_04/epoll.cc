@@ -15,7 +15,7 @@ epoll_event *Epoll::events;
 int Epoll::epoll_fd = 0;
 const std::string Epoll::PATH = "/";
 
-//TimerManager Epoll::timer_manager;
+TimerManager Epoll::timer_manager;
 
 int Epoll::epoll_init(int maxevents, int listen_num){
 	int epoll_fd = epoll_create(listen_num + 1);
@@ -94,7 +94,7 @@ void Epoll::acceptConnection(int listen_fd, int epoll_fd, const std::string path
 			return;
 		}
 
-		SP_ReqData req_info (new requestData(epoll_fd, accept_fd, path));
+		std::shared_ptr<requestData>req_info (new requestData(epoll_fd, accept_fd, path));
 		__uint32_t _epo_event = EPOLLIN | EPOLLET | EPOLLONESHOT;
 		Epoll::epoll_add(accept_fd, req_info, _epo_event);
 		
