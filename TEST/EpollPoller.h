@@ -1,36 +1,40 @@
-#ifndef MUDUO_NET_POLLER_H
-#define MUDUO_NET_POLLER_H
+#ifndef EPOLLER_H
+#define EPOLLER_H
 
 #include <map>
 #include <vector>
-#include "EventLoop.h"
-
+#include <string>
+#include <sys/epoll.h>
+#include <iostream>
 class Channel;
+class EventLoop;
 
 class EPollPoller 
 {
 public:
+	EPollPoller(EventLoop* loop);
+  	virtual ~EPollPoller();
   	typedef std::vector<Channel*> ChannelList;
-
-  	EpollPoller(EventLoop* loop);
-  	virtual ~EpollPoller();
+  	
+	virtual void updateChannel(Channel* channel);
+	void update(int operation, Channel* channel);
 
 //	Polls the I/O events
-	Timestamp poll(int timeoutMs, ChannelList* activeChannels);
-  	virtual void updateChannel(Channel* channel) = 0;//pure virtual
-
+	virtual char* poll(const int timeoutMs, ChannelList* activeChannels);
   	void assertInLoopThread() const
   	{
     		ownerLoop_->assertInLoopThread();
   	}
-
-private:
-	static const int kInitEventListSize = 16;
-	void fillActiveChannels(int numEvents, ChannelList* activeChannels) const;
+	
 	typedef std::vector<struct epoll_event> EventList;
-	typedef std::map<int, Channel*> ChannelMap;
-  	EventLoop* ownerLoop_;
 	EventList events_;
 	int epollfd_;
+
+private:
+	static const int kInitEventListSize = 16;	
+	void fillActiveChannels(int numEvents, ChannelList* activeChannels) const;
+	typedef std::map<int, Channel*> ChannelMap;
+  	EventLoop* ownerLoop_;
+	ChannelMap channels_;
 };
-#endif  // MUDUO_NET_POLLER_H
+#endif

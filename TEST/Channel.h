@@ -5,7 +5,6 @@
 #include <functional>
 #include <sys/epoll.h>
 
-
 class EventLoop;
 
 class Channel
@@ -15,7 +14,7 @@ public:
   	Channel(EventLoop* loop, int fd);
   	~Channel();
   	void handleEvent();
-//for user use
+//for user 
 	void setReadCallback(const EventCallback& cb){
 		readCallback_ = cb;
 	}
@@ -23,30 +22,21 @@ public:
 		writeCallback_ = cb;
 	}
 	void setErrorCallback(const EventCallback& cb){
-		ErrorCallback_ = cb;
+		errorCallback_ = cb;
 	}
-	void setConnCallback(const EventCallback& cb){
-		ConnCallback_ = cb;
+	int fd() const{
+		return fd_;
 	}
-	int fd() const{return fd_;}
-	int events()const{return events_;}
-	void set_revents(int revt){ revents_ = revt;}
+	int events()const{	
+		return events_;
+	}
+	void set_revents(int revt){ 
+		revents_ = revt;
+	}
 	bool isNoneEvent()const{
-		return events_ = kNoneEvent;	
-	}
-//for user use	
-	void enableReading(){
-		events_ |= kReadEvent;
-		update();
+		return events_ == kNoneEvent;	
 	}
 
-	//for Poller
-	int index(){
-		return index_;
-	}
-	void set_index(int idx){
-		index_ = idx;
-	}
 	EventLoop* ownerLoop(){
 		return loop_;
 	}
@@ -59,8 +49,9 @@ private:
 
   	EventLoop* loop_;
   	const int  fd_;
-  	int        events_;
-  	int        revents_; 
+  	int events_;
+  	int revents_; 
+	int index_;
   
   	bool eventHandling_;
 	
