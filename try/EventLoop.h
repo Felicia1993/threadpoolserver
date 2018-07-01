@@ -1,13 +1,13 @@
 #include <vector>
 #include <memory>
-#include "Channel.h"
 
+class Channel;
 class EventLoop{
 public:
+	friend class Channel;
 	EventLoop();
 	~EventLoop();
-//	void printChannel(Channel* a);
-	void testEventLoop();
-private:
-	shared_ptr<Channel*> channel_;
+	void printChannel();
+	void testEventLoop(Channel* channel);
+
 };

@@ -16,10 +16,13 @@ using namespace std;
 #define gettid() syscall(SYS_gettid)
 
 class Channel;
+class EPollPoller;
 
 class EventLoop 
 {
 public:
+	friend class Channel;
+	friend class EPollPoller;
   	EventLoop();
   	~EventLoop();  
   	void loop();
@@ -42,6 +45,7 @@ private:
 	void abortNotInLoopThread();
 	bool looping_;	
   	const pid_t threadId_;  
-//	string epollReturnTime_;
+	string epollReturnTime_;
+	shared_ptr<EPollPoller> epoll_;
 };
 #endif

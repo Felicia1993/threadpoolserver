@@ -1,4 +1,6 @@
 #include "EventLoop.h"
+#include "Channel.h"
+#include "EpollPoller.h"
 #include <sys/eventfd.h>
 #include <sys/epoll.h>
 #include <sys/poll.h>
@@ -35,10 +37,10 @@ void EventLoop::loop(){
 	quit_ = false;
 	while(!quit_){
 		activeChannels_.clear();
-		//epollReturnTime_ = EPollPoller::poll(kPollTimeMs, activeChannels_);	
-		/*for(ChannelList::iterator it = activeChannels_.begin(); it != activeChannels_.end(); ++it){
+		epollReturnTime_ = epoll_->poll(kPollTimeMs, &activeChannels_);	
+		for(ChannelList::iterator it = activeChannels_.begin(); it != activeChannels_.end(); ++it){
 			(*it)->Channel::handleEvent();
-		}*/
+		}
 		for(int i =0 ; i < activeChannels_.size(); i++){
 			activeChannels_[i]->handleEvent();
 		}	

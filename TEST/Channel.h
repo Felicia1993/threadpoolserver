@@ -10,6 +10,7 @@ class EventLoop;
 class Channel
 {
 public:
+	friend class EventLoop;
   	typedef std::function<void()> EventCallback;
   	Channel(EventLoop* loop, int fd);
   	~Channel();
@@ -37,6 +38,17 @@ public:
 		return events_ == kNoneEvent;	
 	}
 
+	void enableReading(){
+		events_ |= kWriteEvent;
+		update();
+	}
+	void set_index(int idx){
+		index_ = idx;
+	}
+	int index() const{
+		return index_;
+	}
+	
 	EventLoop* ownerLoop(){
 		return loop_;
 	}

@@ -1,4 +1,5 @@
 #include "Channel.h"
+#include "EventLoop.h"
 #include <iostream>
 using namespace std;
 const int kNoneEvent = 0;
