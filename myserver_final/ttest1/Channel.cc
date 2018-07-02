@@ -1,18 +1,25 @@
 #include "Channel.h"
 #include "EventLoop.h"
 #include <iostream>
+#include <assert.h>
 using namespace std;
 const int kNoneEvent = 0;
 const int kReadEvent = EPOLLIN|EPOLLPRI;
 const int kWriteEvent = EPOLLOUT;
 
-Channel:: Channel(EventLoop* loop, int fdArg):fd_(fdArg),loop_(loop),index_(-1),events_(0),revents_(0){
+Channel:: Channel(EventLoop* loop, int fdArg):fd_(fdArg),loop_(loop),events_(0),revents_(0){
 
 }
 
+Channel::~Channel(){
+	
+	
+}
+
 void Channel::update(){
+	
 	loop_->updateChannel(this);
-	std::cout<<"something wrong in Channel update.\n";
+//	std::cout<<"something wrong in Channel update.\n";
 }
 
 void Channel::handleEvent(){

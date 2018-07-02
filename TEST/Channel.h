@@ -34,6 +34,11 @@ public:
 	void set_revents(int revt){ 
 		revents_ = revt;
 	}
+
+	void enableReading(){
+		events_ |= kReadEvent;
+		update();
+	}
 	bool isNoneEvent()const{
 		return events_ == kNoneEvent;	
 	}

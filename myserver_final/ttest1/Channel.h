@@ -1,9 +1,10 @@
-#ifndef CHANNEL_H
-#define CHANNEL_H
+#pragma once
 
+#include "time.h"
 #include <memory>
 #include <functional>
 #include <sys/epoll.h>
+#include <iostream>
 
 class EventLoop;
 
@@ -34,19 +35,23 @@ public:
 	void set_revents(int revt){ 
 		revents_ = revt;
 	}
-	bool isNoneEvent()const{
+
+	void set_index(int idx){
+		index_ = idx;
+	}
+	
+	int index(){
+		return index_;
+	}
+	bool isNoneEvent(){
 		return events_ == kNoneEvent;	
 	}
 
 	void enableReading(){
+		std::cout<<"fine";
 		events_ |= kWriteEvent;
+		std::cout<<"update not fine\n";
 		update();
-	}
-	void set_index(int idx){
-		index_ = idx;
-	}
-	int index() const{
-		return index_;
 	}
 	
 	EventLoop* ownerLoop(){
@@ -55,10 +60,14 @@ public:
 private:
   	void update();
 
-  	static const int kNoneEvent;
+  /*	static const int kNoneEvent;
   	static const int kReadEvent;
   	static const int kWriteEvent;
+*/
 
+	int kNoneEvent;
+	int kReadEvent;
+	int kWriteEvent;
   	EventLoop* loop_;
   	const int  fd_;
   	int events_;
@@ -71,4 +80,3 @@ private:
   	EventCallback errorCallback_;
 	EventCallback readCallback_;	
 };	
-#endif  

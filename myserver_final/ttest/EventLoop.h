@@ -1,9 +1,7 @@
 #ifndef EVENTLOOP_H
 #define EVENTLOOP_H
-
 #include <vector>
 #include <memory>
-#include <vector>
 #include <functional>
 #include <unistd.h>
 #include <sys/syscall.h>
