@@ -6,10 +6,9 @@
 #include <map>
 #include "Channel.h"
 #include "EventLoop.h"
+#include "Timestamp.h"
 
 class Epoll{
-//	typedef std::shared_ptr<requestData> SP_ReqData;
-
 public:
 	typedef std::vector<Channel*> ChannelList;
 	Epoll(EventLoop* loop);

@@ -1,5 +1,6 @@
 #include "epoll.h"
 #include "assert.h"
+#include "Timestamp.h"
 #include <iostream>
 
 Epoll::Epoll(EventLoop* loop):ownerloop_(loop){
@@ -17,7 +18,7 @@ void Epoll::updateChannel(Channel* channel){
 	std::cout<<channel->fd()<<" events = "<<channel->events();
 	if(channel->index() < 0){
 	//	cout<<"channels_.end = "<<channels_.end()<<endl;
-		//assert(channels_.find(channel->fd()) == channels_.end());
+		assert(channels_.find(channel->fd()) == channels_.end());
 		struct epoll_event pev;
 		pev.events = static_cast<uint32_t>(channel->events());
 		pev.data.fd = channel->fd();
@@ -29,8 +30,8 @@ void Epoll::updateChannel(Channel* channel){
 	else{
 		//update existing one
 	//	cout<<"channels_.end = "<<channels_.end()<<endl;
-	//	assert(channels_.find(channel->fd()) != channels_.end());
-	//	assert(channels_[channel->fd()] == channel);
+		assert(channels_.find(channel->fd()) != channels_.end());
+		assert(channels_[channel->fd()] == channel);
 		int idx = channel->index();
 		cout<<"idx = "<<idx<<endl;
 	//	assert(0 <= idx && idx < static_cast<int>(events_.size()));
@@ -59,13 +60,14 @@ void Epoll::fillActiveChannels(int numEvents, ChannelList* activeChannels) const
 	}
 }
 
-int Epoll::poll(int timeoutMs, ChannelList* activeChannels){
+Timestamp Epoll::poll(int timeoutMs, ChannelList* activeChannels){
 	cout<<"Epoll::poll()\n";	
 	cout<<"timeoutMs = "<<timeoutMs<<endl;
 	int numEvents = epoll_wait(epollfd_, &*events_.begin(), static_cast<int>
 (events_.size()), timeoutMs);
 	cout<<"numEvents = "<<numEvents<<endl;
 	cout<<"Epoll::poll()\n";
+	Timestamp now(Timestamp::now());
 	if(numEvents > 0){
 		std::cout<<numEvents<<" events happened";
 		fillActiveChannels(numEvents, activeChannels);
@@ -73,5 +75,5 @@ int Epoll::poll(int timeoutMs, ChannelList* activeChannels){
 			events_.resize(events_.size()*2);
 		}
 	}
-	return numEvents;
+	return now;
 }
