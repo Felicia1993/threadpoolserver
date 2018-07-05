@@ -19,7 +19,6 @@ TimerQueue::TimerQueue(EventLoop* loop):loop_(loop),timerfd_(createTimerfd()),
 timerfdChannel_(loop, timerfd_),timers_(),callingExpiredTimers_(false){
 	timerfdChannel_.setReadCallback(std::bind(&TimerQueue::handleRead, this));
 	timerChannel_.enableReading();
-	
 }
 
 TimerQueue::~TimerQueue(){
@@ -50,6 +49,9 @@ void TimerQueue::handleRead(){
 std::vector<Entry> TimerQueue::getExpired(Timestamp now){
 	std::vector<Entry> expired;
 	Entry sentry = std::make_pair(now, reinterpret_cast<Timer*>(UINTPTR_MAX));
+	while(!timers_.empty()){
+
+	}
 	TimerList::iterator it = timers_.lower_bound(sentry);
 	assert(it == timers.end() || now < it->first());
 	std::copy(timers_.begin(), it, back_inserter(expired));

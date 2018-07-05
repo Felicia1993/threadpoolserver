@@ -39,12 +39,24 @@ private:
 //	typedef std::function<void()> Functor;
 	typedef std::vector<Channel*> ChannelList;
 
+	void handleRead();//wake up 
+	void doPendingFunctors();
+
+	void runInLoop();
+	void queueInLoop();
+
 	shared_ptr<Epoll> poller_;
 	ChannelList activeChannels_;
 	bool quit_;
+
+	bool callingPendingFunctors_;
+
 	void abortNotInLoopThread();
 	bool looping_;	
   	const pid_t threadId_;  
-
+	int wakeupFd_;
+	std::weak_ptr<Channel>wakeupChannel_;
+	MutexLock mutex_;
+	std::vector<Functor> pendingFunctors_;//mutex_
 };
 #endif

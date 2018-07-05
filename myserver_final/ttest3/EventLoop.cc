@@ -43,6 +43,7 @@ void EventLoop::loop(){
 		for(ChannelList::iterator it = activeChannels_.begin(); it != activeChannels_.end(); ++it){
 			(*it)->handleEvent();
 		}	
+		doPendingFunctors();
 	}
 	cout<<"EventLoop "<<this<<" stop looping\n";
 	looping_ = false;
@@ -59,7 +60,39 @@ void EventLoop::updateChannel(Channel* channel){
 	poller_->updateChannel(channel);
 
 }
-/**/
+
+void EventLoop::doPendingFunctors(){
+	std::vector<Functor> functors;
+	callingPendingFunctors_ = true;
+
+	{
+		MutexLockGuard lock(mutex_);
+		functors.swap(pendingFunctors_);
+	}
+	for(size_t i = 0; i < functors.size(); i++){
+		functors[i]();
+	}
+	callingPendingFunctors_ = false;
+}
 void EventLoop::abortNotInLoopThread(){
 	cout<<"EventLoop::abortNotInLoopThread"<<this<<"was created in thread_id"<<threadId_<<",current thread_id = "<<gettid();
+}
+
+void EventLoop::runInLoop(const Functor& cb){
+	if(isInLoopThread()){
+		cb();
+	}
+	else{
+		queueInLoop(cb);
+	}
+}
+
+void EventLoop::queueInLoop(const Functor& cb){
+	{
+	MutexGuardLock(mutex_);
+	pendingFunctors_.push_back(cb);
+	}
+	if(!isInLoopThread() || callingPendingFunctors_){
+		wakeup();
+	}
 }
