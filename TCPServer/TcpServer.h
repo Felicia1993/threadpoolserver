@@ -1,18 +1,19 @@
 
 class TcpServer:noncopyable{
 public:
-	TcpServer(EventLoop* loop, const InetAddress& listenAddr);
+	TcpServer(EventLoop* loop, int threadnum, int port);
 	~TcpServer();
-	void setThreadNum();
+	EventLoop* getLoop() const { return loop_; }
+    	void start();
+    	void handNewConn();
+    	void handThisConn() { loop_->updatePoller(acceptChannel_); }
 private:
-	void newConnection(int sockfd, const InetAddress& peerAddr);
-	void removeConnection(const TcpConnectionPtr& conn);
-	void removeConnectionInLoop(const TcpConnectionPtr& conn);
-
-	typedef std::map<std::string, TcpConnectionPtr> ConnectionMap;
-
-	EventLoop* loop_;
-	const std::string name_;
-	std::unique_str<Acceptor> acceptor_;
-	std::unique_str<EventLoopThreadPool> threadPool_;	
+	 EventLoop *loop_;
+    	int threadNum_;
+    	std::unique_ptr<EventLoopThreadPool> eventLoopThreadPool_;
+    	bool started_;
+    	std::shared_ptr<Channel> acceptChannel_;
+    	int port_;
+    	int listenFd_;
+    	static const int MAXFDS = 100000;
 };

@@ -1,14 +1,14 @@
 #include "TcpServer.h"
 
-TcpServer::TcpServer(EventLoop* loop, const InetAddress& listenAddr){
-	
+TcpServer::TcpServer(EventLoop* loop, int threadnum, int port):loop_(loop), threadNum_(threadnum), port_(port),started_(false),listenFd_(socket_bind_listen(port_)){
+	acceptChannel_->
 }
 
 TcpServer::~TcpServer(){
-
+	
 }
 
-void TcpServer::setThreadNum(){
+void TcpServer::setThreadNum(int num){
 
 }
 
