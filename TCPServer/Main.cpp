@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
     	int threadNum = 4;
-    	int port = 80;
+    	int port = 8080;
     	std::string logPath = "/linya_WebServer.log";
 
     	int opt;
@@ -18,6 +18,15 @@ int main(int argc, char *argv[])
                 		threadNum = atoi(optarg);
                 		break;
             		}
+			case 'l':{
+				logPath = optarg();
+				if(logPath.size() < 2 || optarg[0] != '/'){
+					printf("logPath should start with \"/\"\n");
+					abort();
+				}
+				break;
+		
+			}
             		case 'p':{
                 		port = atoi(optarg);
                 		break;

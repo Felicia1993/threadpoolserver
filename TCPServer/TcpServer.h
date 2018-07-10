@@ -1,5 +1,10 @@
+#pragma once
+#include "EventLoop.h"
+#include "Channel.h"
+#include "EventLoopThreadPool.h"
+#include <memory>
 
-class TcpServer:noncopyable{
+class TcpServer{
 public:
 	TcpServer(EventLoop* loop, int threadnum, int port);
 	~TcpServer();
