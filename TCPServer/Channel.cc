@@ -16,10 +16,17 @@ Channel::~Channel(){
 	
 }
 
-void Channel::update(){
-	
-	loop_->updateChannel(this);
-//	std::cout<<"something wrong in Channel update.\n";
+int Channel::parseURI(){
+
+}
+
+int Channel::parseHead(){
+
+}
+
+
+int Channel::analysisRequest(){
+
 }
 
 void Channel::handleEvent(){

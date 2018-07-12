@@ -42,4 +42,21 @@ void TcpServer::handNewConn(){
 	acceptChannel_->setEvents(EPOLLIN | EPOLLET);
 }
 	
+void TcpServer::start(){
+	eventLoopThreadPool_->start();
+	acceptChannel_->setEvents(EPOLLIN | EPOLLET);
+	acceptChannel_->setReadCallback(bind(&TcpServer::handNewConn, this));
+	acceptChannel_->setConnCallback(bind(&TcpServer::handThisConn, this));
+	loop_->addToPoller(acceptChannel_, 0);
+	started_ = true;
+}
 
+void TcpServer::handNewConn(){
+	struct sockaddr_in client_addr;
+	memset(client_addr, 0,sizeof(struct sockaddr_in));
+	socklen_t client_addr_len = sizeof(client_addr);
+	int accept_fd = 0;
+	while((accept_fd = accept(listenFd_, (struct sockaddr*)&client_addr, &client_addr_len)) > 0){
+		EventLoop* loop = eventLoopThreadPool_->getNextLoop();
+	}
+}

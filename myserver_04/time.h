@@ -1,7 +1,7 @@
 #pragma once
 #include "requestData.h"
-#include "./base/noncopyable.hpp"
-#include "./base/mutexLock.hpp"
+#include "./base/noncopyable.h"
+#include "./base/mutexLock.h"
 #include <unistd.h>
 #include <memory>
 #include <queue>
@@ -23,7 +23,9 @@ public:
 	void clearReq();
 	void setDeleted();
 	bool isDeleted() const;
-	size_t getExpTime() const;	
+	size_t getExpTime() const{
+		return expired_time;
+	}	
 };
 
 struct timerCmp{

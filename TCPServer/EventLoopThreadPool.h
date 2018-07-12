@@ -3,10 +3,9 @@
 
 class EventLoopThread{
 public:
-	EventLoopThread();
-	~EventLoopThread();
-	void setThreadNum(int numThreads){
-		numThreads_ = numThreads;
+	EventLoopThread(EventLoop* baseLoop, int numThreads);
+	~EventLoopThread(){
+		LOG << "~EventLoopThreadPool()";
 	}
 	void start();
 	EventLoop* getNextLoop();
