@@ -112,7 +112,7 @@ private:
 	bool error_;
 	ConnectionState connectionState_;
 	std::unordered_map<std::string, std::string> headers;
-	std::weak_ptr<TimeNode> timer;
+	std::weak_ptr<TimeNode> timer_;
 	std::string file_name_;
 	std::string path_;
 	int nowReadPos_;

@@ -39,5 +39,4 @@ private:
 	CountDownLatch latch_;
 };
 
-}
-#endif
+
