@@ -16,17 +16,12 @@ Channel::~Channel(){
 	
 }
 
-int Channel::parseURI(){
-
+int getfd() const{
+	return fd_;
 }
 
-int Channel::parseHead(){
-
-}
-
-
-int Channel::analysisRequest(){
-
+void setFd(int fd){
+	fd_ = fd;
 }
 
 void Channel::handleEvent(){

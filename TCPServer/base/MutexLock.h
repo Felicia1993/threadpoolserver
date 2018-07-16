@@ -23,7 +23,7 @@ public:
 		return &mutex;
 	}
 private:
-	MutexLock &mutex;
+	pthread_mutex_t &mutex;
 
 private:
 	friend class Condition;

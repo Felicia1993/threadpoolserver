@@ -84,7 +84,7 @@ public:
 	~HttpData();
 	void reset();
 	void seperateTimer();
-	void linkTimer(std::shared_ptr<TimerNode> mtimer){
+	void linkTimer(std::weak_ptr<TimerNode> mtimer){
 		timer_ = mtimer;
 	}
 	std::shared_ptr<Channel> getChannel(){
@@ -112,7 +112,7 @@ private:
 	bool error_;
 	ConnectionState connectionState_;
 	std::unordered_map<std::string, std::string> headers;
-	std::weak_ptr<TimeNode> timer_;
+	std::weak_ptr<TimerNode> timer_;
 	std::string file_name_;
 	std::string path_;
 	int nowReadPos_;

@@ -1,3 +1,4 @@
+#pragma once
 #include "base/MutexLock.h"
 #include <unistd.h>
 #include <memory>

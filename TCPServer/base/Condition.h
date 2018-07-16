@@ -12,7 +12,7 @@ public:
 		pthread_cond_init(&cond, NULL);
 	}
 	~Condition(){
-		pthread_cond_destroy(&cond, NULL);
+		pthread_cond_destroy(&cond);
 	}
 	void wait(){
 		pthread_cond_wait(&cond, mutex.get());
@@ -24,7 +24,7 @@ public:
 		pthread_cond_broadcast(&cond);
 	}
 	bool waitForSeconds(int seconds){
-		struct timspce abstime;
+		struct timespec abstime;
 		clock_gettime(CLOCK_REALTIME, &abstime);
 		abstime.tv_sec += static_cast<time_t>(seconds);
 		return ETIMEDOUT == pthread_cond_timedwait(&cond, mutex.get(), &abstime);
@@ -32,5 +32,5 @@ public:
 
 private:
 	MutexLock &mutex;
-	pthread_cont_t cond;
+	pthread_cond_t cond;
 };

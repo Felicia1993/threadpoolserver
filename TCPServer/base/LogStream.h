@@ -1,14 +1,19 @@
 #pragma once
+#include "noncopyable.h"
+#include <assert.h>
+#include <string.h>
+#include <string>
 
 const int kSmallBuffer = 4000;
 const int kLargeBuffer = 4000*1000;
-
-class FixedBuffer : boost::noncopyable
+ 
+template<int SIZE>
+class FixedBuffer : noncopyable
 {
  	public:FixedBuffer(): cur_(data_){}
   	~FixedBuffer(){}
   	void append(const char* buf, size_t len){
-    		if (avail() > static_cast<int>len){
+    		if (avail() > static_cast<int>(len)){
       			memcpy(cur_, buf, len);
       			cur_ += len;
     		}
@@ -35,7 +40,7 @@ public:
 	typedef FixedBuffer<kSmallBuffer> Buffer;
 	
 	LogStream& operator<<(bool v){
-		buffer_.append(v ?"1":""0,1);
+		buffer_.append(v ?"1":"0",1);
 		return *this;
 	}
 
@@ -82,7 +87,7 @@ public:
 private:
 	Buffer buffer_;
 	void staticCheck();
-	template<typename T>;
+	template<typename T>
 	void formatInteger(T);
 
 	static const int kMaxNumericSize = 32;

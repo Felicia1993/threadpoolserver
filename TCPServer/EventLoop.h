@@ -4,7 +4,7 @@
 #include "base/Logging.h"
 #include "Channel.h"
 #include "base/CurrentThread.h"
-#include "Util.h"
+#include "util.h"
 #include <vector>
 #include <memory>
 #include <functional>
@@ -40,7 +40,7 @@ public:
 private:
 	bool looping_;
 	bool quit_;
-	const pit_t threadId_;
+	const pid_t threadId_;
 	shared_ptr<Epoll> poller_;
 	int wakeupFd_;
 	shared_ptr<Channel> pwakeupChannel_;	
