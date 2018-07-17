@@ -1,5 +1,5 @@
 #include "Epoll.h"
-#include "Util.h"
+#include "util.h"
 #include "base/Logging.h"
 #include <sys/epoll.h>
 #include <errno.h>
@@ -9,7 +9,6 @@
 #include <queue>
 #include <deque>
 #include <assert.h>
-
 #include <arpa/inet.h>
 #include <iostream>
 using namespace std;
@@ -71,12 +70,12 @@ void Epoll::epoll_del(SP_Channel request){
 	fd2http_[fd].reset();
 }
 
-std::vector<SP_Channel> EPoll::poll(){
+std::vector<SP_Channel>Epoll::poll(){
 	while(true){
-		int epoll_count = epoll_wait(epollFd_, &*events_.begin(), events_.size());
+		int epoll_count = epoll_wait(epollFd_, &*events_.begin(), events_.size(),EPOLLWAIT_TIME);
 		if(epoll_count < 0)
 			perror("epoll wait error");
-		std::vector<SP_Channel> req_data = getEventsRequest(event_count);
+		std::vector<SP_Channel> req_data = getEventsRequest(epoll_count);
 		if(req_data.size() > 0)
 			return req_data;
 	}

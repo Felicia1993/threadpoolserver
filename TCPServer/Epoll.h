@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <sys/epoll.h>
 #include <memory>
+#include "Channel.h"
+#include "HttpData.h"
 
 class Epoll{
 public:

@@ -1,4 +1,10 @@
 #include "TcpServer.h"
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include "util.h"
+#include "base/Logging.h"
+#include <functional>
 
 TcpServer::TcpServer(EventLoop* loop, int threadnum, int port):loop_(loop), threadNum_(threadnum), port_(port),started_(false),listenFd_(socket_bind_listen(port_)){
 	acceptChannel_->setFd(listenFd_);
@@ -51,12 +57,3 @@ void TcpServer::start(){
 	started_ = true;
 }
 
-void TcpServer::handNewConn(){
-	struct sockaddr_in client_addr;
-	memset(client_addr, 0,sizeof(struct sockaddr_in));
-	socklen_t client_addr_len = sizeof(client_addr);
-	int accept_fd = 0;
-	while((accept_fd = accept(listenFd_, (struct sockaddr*)&client_addr, &client_addr_len)) > 0){
-		EventLoop* loop = eventLoopThreadPool_->getNextLoop();
-	}
-}

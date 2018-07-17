@@ -5,11 +5,13 @@
 #include "Channel.h"
 #include "base/CurrentThread.h"
 #include "util.h"
+#include <unistd.h>
 #include <vector>
 #include <memory>
 #include <functional>
-
+#include <iostream>
 using namespace std;
+
 class EventLoop{
 public:
 	typedef std::function<void()> Functor;
@@ -20,14 +22,14 @@ public:
 	void runInLoop(Functor&& cb);
 	void queueInLoop(Functor&& cb);
 	bool isInLoopThread() const{
-		return threadId_ = CurrentThread::tid();
+		return threadId_ == CurrentThread::tid();
 	}
 	void assertInLoopThread(){
 		assert(isInLoopThread());
 	}
-	void shutdown(shared_ptr<Channel> channel){
-		shutdownWR(channel->getFd());
-	}
+/*	void shutdown(shared_ptr<Channel> channel){
+		shutDownWR(channel->getFd());
+	}*/
 	void removeFromPoller(shared_ptr<Channel> channel){
 		poller_->epoll_del(channel);
 	}

@@ -1,26 +1,27 @@
 #include "EventLoop.h"
+#include <sys/eventfd.h>
 
 __thread EventLoop* t_loopInThisThread = 0;
 
 int createEventfd(){
-	int evtfd = eventfd(0, EFD_NONBLOCK | EFD_COLEXEC);
+	int evtfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 	if(evtfd < 0){
 		LOG << "Failed in eventfd";
 		abort();
 	}
 	return evtfd;
 }
-EventLoop::EventLoop():looping_(false),quit_(false),threadId_(CurrentThread::tid()),epoll_(new Epoll()),wakeupFd_(createEventfd()),pwakeupChannel_(new Channel(this, wakeupFd_)),eventHandling_(false),callingPendingFunctors_(false){
-	if(t_loopInThread){
+
+EventLoop::EventLoop():looping_(false),quit_(false),threadId_(CurrentThread::tid()),poller_(new Epoll()),wakeupFd_(createEventfd()),pwakeupChannel_(new Channel(this, wakeupFd_)),eventHandling_(false),callingPendingFunctors_(false){
+	if(t_loopInThisThread){
 		LOG<<"Another EventLoop "<< t_loopInThisThread<<" exists in this thread" << threadId_;
 	}
 	else{
 		t_loopInThisThread = this;
 	}
-
 	pwakeupChannel_->setEvents(EPOLLIN | EPOLLET);
-	pwakeupChannel_->setReadHandler(bind(&EventLoop::handleRead, this));
-	pwakeupChannel_->setConnHandler(bind(&EventLoop::handleConn, this));
+	pwakeupChannel_->setReadCallback(bind(&EventLoop::handleRead, this));
+	pwakeupChannel_->setReadCallback(bind(&EventLoop::handleConn, this));
 	poller_->epoll_add(pwakeupChannel_, 0);
 }
 
@@ -80,7 +81,7 @@ void EventLoop::loop(){
 		ret = poller_->poll();
 		eventHandling_ = true;
 		for(auto &it : ret){
-			it->handleEvents();
+			it->handleEvent();
 		}
 		eventHandling_ = false;
 		doPendingFunctors();

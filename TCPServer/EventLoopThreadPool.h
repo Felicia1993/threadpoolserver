@@ -1,10 +1,12 @@
-#include "Thread.h"
+#include "base/Thread.h"
 #include "EventLoop.h"
+#include "EventLoopThread.h"
 
-class EventLoopThread{
+
+class EventLoopThreadPool{
 public:
-	EventLoopThread(EventLoop* baseLoop, int numThreads);
-	~EventLoopThread(){
+	EventLoopThreadPool(EventLoop* baseLoop, int numThreads);
+	~EventLoopThreadPool(){
 		LOG << "~EventLoopThreadPool()";
 	}
 	void start();
@@ -14,6 +16,6 @@ private:
 	bool started_;
 	int numThreads_;
 	int next_;
-	Thread threads_;
+	vector<shared_ptr<EventLoopThread>> threads_;
 	vector<EventLoop*> loops_;
 };

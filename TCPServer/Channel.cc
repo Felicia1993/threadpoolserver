@@ -16,14 +16,6 @@ Channel::~Channel(){
 	
 }
 
-int getfd() const{
-	return fd_;
-}
-
-void setFd(int fd){
-	fd_ = fd;
-}
-
 void Channel::handleEvent(){
 	cout<<"this is Channel handleEvent\n";
 	if(revents_ & EPOLLERR){

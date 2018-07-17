@@ -18,15 +18,21 @@ public:
 	Channel(EventLoop* loop);
   	Channel(EventLoop* loop, int fd);
   	~Channel();
-	int getFd();
-	void setFd(int fd);
+	int getFd(){
+		return fd_;
+	}
+	void setFd(int fd){
+		fd_ = fd;
+	}
+
   	void handleEvent();
 
 	void setHolder(std::shared_ptr<HttpData> holder){
 		holder_ = holder;
 	}
+	
 
-	std::weak_ptr<HttpData> getHolder(){
+	std::shared_ptr<HttpData> getHolder(){
 		return holder_;
 	}
 	
@@ -42,6 +48,10 @@ public:
 	}
 	void setConnCallback(EventCallback&& cb){
 		connCallback_ = cb;
+	}
+
+	void setRevents(__uint32_t ev){
+		revents_ = ev;
 	}
 
 	void setEvents(__uint32_t ev){
@@ -71,7 +81,7 @@ private:
   	__uint32_t revents_; 
 	__uint32_t lastEvents_;
   
-  	std::weak_ptr<HttpData> holder_;
+  	std::shared_ptr<HttpData> holder_;
 	
   	EventCallback writeCallback_;
   	EventCallback errorCallback_;

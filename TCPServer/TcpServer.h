@@ -8,6 +8,7 @@ class TcpServer{
 public:
 	TcpServer(EventLoop* loop, int threadnum, int port);
 	~TcpServer();
+	void setThreadNum(int num);
 	EventLoop* getLoop() const { return loop_; }
     	void start();
     	void handNewConn();
