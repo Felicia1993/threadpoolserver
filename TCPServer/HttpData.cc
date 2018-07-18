@@ -31,7 +31,7 @@ std::string MimeType::getMime(const std::string &suffix){
 		return mime[suffix];
 }
 
-HttpData::HttpData(EventLoop* loop, int connfd):loop_(loop),fd_(connfd),channel_(new Channel(loop, connfd)),method_(METHOD_GET),HTTPversion_(HTTP_11),state_(STATE_PARSE_URI), h_state_(H_START),keep_alive(false),error_(false),connectionState_(H_CONNECTED),{
+HttpData::HttpData(EventLoop* loop, int connfd):loop_(loop),fd_(connfd),channel_(new Channel(loop, connfd)),method_(METHOD_GET),HTTPversion_(HTTP_11),state_(STATE_PARSE_URI), h_state_(H_START),keep_alive(false),error_(false),connectionState_(H_CONNECTED){
 	channel_->setReadCallback(bind(&HttpData::handleread,this));
 	channel_->setWriteCallback(bind(&HttpData::handlewrite,this));
 	channel_->setConnCallback(bind(&HttpData::handleConn,this));
@@ -97,7 +97,7 @@ HeaderState HttpData::parse_Headers(){
 					key_end = i;
 					if(key_end - key_start <= 0)
 						return PARSE_HEADER_ERROR;
-					H_STATE = H_COLON;
+					hstate_ = H_COLON;
 				}
 				else if(str[i] == '\n' || str[i] =='\r')
 					return PARSE_HEADER_ERROR;
@@ -106,19 +106,19 @@ HeaderState HttpData::parse_Headers(){
 			case H_COLON:	
 			{
 				if(str[i] == ' ')
-					H_STATE = h_SPACE_AFTER_COLON;
+					hstate_ = h_SPACE_AFTER_COLON;
 				else 
 					return PARSE_HEADER_ERROR;
 				break;
 			}
 			case h_SPACE_AFTER_COLON:{
-				H_STATE = H_VALUE;
+				hstate_ = H_VALUE;
 				value_start = i;
 				break;
 			}
 			case H_VALUE:{
 				if(str[i] == '\r'){
-					H_STATE = H_CR;
+					hstate_ = H_CR;
 					value_end = i;
 					if(value_end - value_start <= 0)
 						return PARSE_HEADER_ERROR;
@@ -129,7 +129,7 @@ HeaderState HttpData::parse_Headers(){
 			}
 			case H_CR:{
 				if(str[i] == '\n'){
-					H_STATE = H_LF;
+					hstate_ = H_LF;
 					string key(str.begin()+key_start, str.begin()+key_end);
 					string value(str.begin() + value_start, str.end() + value_end);
 					headers[key] = value;
@@ -141,16 +141,16 @@ HeaderState HttpData::parse_Headers(){
 			}
 			case H_LF:{
 				if(str[i] == '\r')
-					H_STATE = H_END_CR;
+					hstate_ = H_END_CR;
 				else{
 					key_start = i;
-					H_STATE = H_KEY;
+					hstate_ = H_KEY;
 				}
 				break;
 			}
 			case H_END_CR:{
 				if(str[i] == '\n'){
-					H_STATE = H_END_LF;
+					hstate_ = H_END_LF;
 				}
 				else
 					return PARSE_HEADER_ERROR;
@@ -282,22 +282,22 @@ void HttpData::handleread(){
 				content_length = stoi(headers["Content-length"]);
 			}
 			else{
-				error = true;
+				error_ = true;
 				handleError(fd, 400, "Bad Request: Lack of argument (Content-length)");
 				break;
 			}
 			if(inBuffer_.size() < content_length)
 				break;
-			state = STATE_ANALYSIS;
+			state_ = STATE_ANALYSIS;
 		}
-		if(state == STATE_ANALYSIS){
+		if(state_ == STATE_ANALYSIS){
 			AnalysisState flag = this->analysisRequest();
 			if(flag == ANALYSIS_SUCCESS){
-				state = STATE_FINISH;
+				state_ = STATE_FINISH;
 				break;	
 			}	
 			else{
-				error = true;
+				error_ = true;
 				break;
 			}			
 		}
@@ -305,13 +305,13 @@ void HttpData::handleread(){
 	}while(false);
 	if(!error_){
 		if(outBuffer_.size() > 0){
-			handleWrite();
+			handlewrite();
 		}
 		if(!error_ && state_ == STATE_FINISH){
 			this->reset();
 			if(inBuffer_.size() > 0){
 				if(connectionState_ != H_DISCONNECTING)
-					handleRead();
+					handleread();
 			}
 		}
 		else if(!error_ && connectionState_ != H_DISCONNECTING){
@@ -322,7 +322,7 @@ void HttpData::handleread(){
 
 void HttpData::handlewrite(){
 	if(!error_){
-		if(writen(fd, outBuffer) < 0){
+		if(writen(fd_, outBuffer_) < 0){
 			perror("written");
 			events_ = 0;
 			error_ = true;
@@ -335,7 +335,7 @@ void HttpData::handlewrite(){
 void HttpData::handleError(int fd, int err_num, std::string short_msg){
 	short_msg = " " + short_msg;
 	char send_buff[4096];
-	string body_buff, head_buff;
+	string body_buff, header_buff;
 	body_buff += "<html><title>something wrong</title></html>";
     	body_buff += "<body bgcolor=\"ffffff\">";
     	body_buff += to_string(err_num) + short_msg;
@@ -358,15 +358,15 @@ void HttpData::handleConn(){
 			if(keep_alive){
 				timeout = DEFAULT_KEEP_ALIVE_TIME; DEFAULT_KEEP_ALIVE_TIME;				
 			}
-			if((events & EPOLLIN) && (events & EPOLLOUT)){
-				events = __uint32_t(0);
-				events |= EPOLLOUT;
+			if((events_ & EPOLLIN) && (events_ & EPOLLOUT)){
+				events_ = __uint32_t(0);
+				events_ |= EPOLLOUT;
 			}
-			events |= EPOLLET;
+			events_ |= EPOLLET;
 			loop_->updatePoller(channel_, timeout);
 		}
 		else if(keep_alive){
-			events |= (EPOLLIN | EPOLLET | EPOLLONESHOT);
+			events_ |= (EPOLLIN | EPOLLET | EPOLLONESHOT);
 			int timeout = DEFAULT_EXPIRED_TIME;
 			loop_->updatePoller(channel_, timeout);
 		}

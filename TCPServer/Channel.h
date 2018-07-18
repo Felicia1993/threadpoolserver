@@ -58,7 +58,7 @@ public:
 		events_ = ev;
 	}
 
-	__uint32_t getEvents()const{	
+	__uint32_t& getEvents()const{	
 		return events_;
 	}
 

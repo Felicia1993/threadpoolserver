@@ -10,6 +10,7 @@
 #include <deque>
 #include <assert.h>
 #include <arpa/inet.h>
+
 #include <iostream>
 using namespace std;
 
@@ -88,7 +89,7 @@ void Epoll::handleExpired(){
 std::vector<SP_Channel> getEventsRequest(int events_num){
 	std::vector<SP_Channel> req_data;
 	for(int i = 0; i < events_num; i++){
-		int fd = events_[i].data.fd;
+		/*int fd = events_[i].data.fd;
 	
 		SP_Channel cur_req = fd2chan_[fd];
 	
@@ -99,15 +100,15 @@ std::vector<SP_Channel> getEventsRequest(int events_num){
 		}
 		else{
 			LOG<<"SP cur_req is invalid";
-		}
+		}*/
 	}
 	return req_data;
 }
 
 void add_timer(std::shared_ptr<Channel> request_data, int timeout){
 	shared_ptr<HttpData> t = request_data->getHolder();
-	if(t)
-		timerManager_.addTimer(t, timeout);
+	/*if(t)
+		//timerManager_.addTimer(t, timeout);
 	else 
-		LOG<<"timer add fail";
+		LOG<<"timer add fail";*/
 }

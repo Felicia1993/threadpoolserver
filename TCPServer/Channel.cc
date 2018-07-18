@@ -7,9 +7,11 @@ const int kNoneEvent = 0;
 const int kReadEvent = EPOLLIN|EPOLLPRI;
 const int kWriteEvent = EPOLLOUT;
 
-Channel:: Channel(EventLoop* loop, int fdArg):fd_(fdArg),loop_(loop),events_(0),revents_(0){
+Channel:: Channel(EventLoop* loop, int fdArg):fd_(fdArg),loop_(loop),events_(0),lastEvents_(0){
 
 }
+
+Channel::Channel(EventLoop* loop):loop_(loop),events_(0),lastEvents_(0){}
 
 Channel::~Channel(){
 	

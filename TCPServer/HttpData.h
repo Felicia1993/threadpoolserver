@@ -7,10 +7,10 @@
 #include <sys/epoll.h>
 #include <functional>
 #include <unistd.h>
+#include "EventLoop.h"
+#include "Timer.h"
+#include "Channel.h"
 
-class EventLoop;
-class TimerNode;
-class Channel;
 
 enum ProcessState{
 	STATE_PARSE_URI = 1,
@@ -107,7 +107,7 @@ private:
 	HttpMethod method_;
 	HttpVersion HTTPversion_;
 	ProcessState state_;
-	ParseState h_state_;
+	ParseState hstate_;
 	bool keep_alive;	
 	bool error_;
 	ConnectionState connectionState_;
